@@ -30,6 +30,12 @@ from pathlib import Path
 
 import requests
 
+try:  # optional: load a local .env for standalone local builds (CI uses secrets)
+    from dotenv import load_dotenv
+    load_dotenv(Path(__file__).parent / ".env")
+except ImportError:
+    pass
+
 ROOT = Path(__file__).parent
 OUT_DIR = ROOT / "dist"
 OUT = OUT_DIR / "index.html"
