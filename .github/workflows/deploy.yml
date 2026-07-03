@@ -1,0 +1,40 @@
+name: Build & deploy help center
+
+on:
+  schedule:
+    - cron: "0 6 * * *"      # daily at 06:00 UTC — regenerate from Confluence CSKB
+  workflow_dispatch: {}       # allow manual runs
+  push:
+    branches: [main]          # rebuild on code changes
+
+concurrency:
+  group: deploy-help-center
+  cancel-in-progress: true
+
+jobs:
+  build-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install deps
+        run: pip install -r requirements.txt
+
+      - name: Build static site from Confluence CSKB
+        env:
+          ATLASSIAN_EMAIL: ${{ secrets.ATLASSIAN_EMAIL }}
+          ATLASSIAN_API_TOKEN: ${{ secrets.ATLASSIAN_API_TOKEN }}
+          CONFLUENCE_DOMAIN: ${{ vars.CONFLUENCE_DOMAIN || 'onedome.atlassian.net' }}
+          CSKB_SPACE_ID: ${{ vars.CSKB_SPACE_ID || '591855635' }}
+        run: python build.py
+
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy dist --project-name=onedome-help-center --branch=main
