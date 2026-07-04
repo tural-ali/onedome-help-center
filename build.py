@@ -185,8 +185,7 @@ TEMPLATE = r"""<!doctype html>
   header.nav{background:var(--navy); position:sticky; top:0; z-index:50}
   header.nav .wrap{display:flex; align-items:center; height:72px; gap:28px}
   .brand{display:flex; align-items:center; gap:10px; cursor:pointer; text-decoration:none}
-  .brand .pin{width:26px;height:26px;flex:0 0 auto}
-  .brand .word{color:#fff; font-family:var(--head); font-weight:800; letter-spacing:.14em; font-size:16px}
+  .brand .logo{height:30px; width:auto; display:block; flex:0 0 auto}
   nav.menu{display:flex; gap:26px; margin-left:8px}
   nav.menu a{color:#EDEDF2; font-size:16px}
   nav.menu a:hover{color:#fff; text-decoration:none}
@@ -261,8 +260,7 @@ TEMPLATE = r"""<!doctype html>
 <header class="nav">
   <div class="wrap">
     <a class="brand" href="https://onedome.com">
-      <svg class="pin" viewBox="0 0 24 24" fill="none"><path d="M12 2C7.6 2 4 5.6 4 10c0 5.2 6.6 11.3 7.4 12 .35.3.85.3 1.2 0C13.4 21.3 20 15.2 20 10c0-4.4-3.6-8-8-8Z" fill="#FBBB30"/><circle cx="12" cy="10" r="3" fill="#010022"/></svg>
-      <span class="word">ONEDOME</span>
+      <svg class="logo" role="img" aria-label="OneDome" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 284 57"><path fill="#fff" d="M217.3 19.5c-7.2 0-13 5.8-13 13s5.8 13 13 13 13-5.8 13-13-5.8-13-13-13zm0 4.3c4.8 0 8.7 3.9 8.7 8.7 0 4.8-3.9 8.7-8.7 8.7-4.8 0-8.7-3.9-8.7-8.7 0-4.9 3.9-8.7 8.7-8.7M130.7 37.2 117.4 20h-4.1v24.9h4.3V27.2l13.7 17.7h3.7V20h-4.3v17.2zm15-2.9h12.5v-3.9h-12.5v-6.5h14.1V20h-18.4v24.9H160V41h-14.3v-6.7zm40.2 6.2h-6.7v-21h6.7c6.1 0 9.6 5 9.6 10.7-.1 5.5-3.8 10.3-9.6 10.3zm-.1-25.4h-15.2l1.9 4.4h2.4v25.4h11c4 0 6.8-1 9.5-4 2.8-2.9 4.4-7 4.4-11.1 0-8-5.9-14.7-14-14.7zm62.1 16.6L240.3 20h-4.7v24.9h4.3V27.1l7.8 11.6h.2l7.8-11.7v17.9h4.4V20h-4.7l-7.5 11.7zm21.9 9.3v-6.7h12.4v-3.9h-12.4v-6.5h14V20h-18.4v24.9H284V41h-14.2zM92.9 15.2c-8.4 0-15.2 6.7-15.2 15.1 0 8.3 6.8 15.1 15.2 15.1 8.4 0 15.2-6.7 15.2-15.1 0-8.4-6.8-15.1-15.2-15.1zm0 4.3c6 0 10.8 4.8 10.8 10.7 0 5.9-4.9 10.7-10.8 10.7-6 0-10.8-4.8-10.8-10.7 0-5.9 4.8-10.7 10.8-10.7"></path><path fill="#fbbb30" d="M30.7 0C14 0 .5 13.5.5 30.2v.6C.7 38.9 4 46.2 9.4 51.5l6.1-6.1C12 41.9 9.7 37.2 9.3 32c-.1-.6-.1-1.2-.1-1.9 0-11.9 9.7-21.6 21.6-21.6 11.9 0 21.6 9.6 21.6 21.6 0 .6 0 1.3-.1 1.9-.4 5.2-2.7 9.9-6.2 13.4l6.1 6.1c5.3-5.3 8.7-12.6 8.8-20.7v-.6C60.9 13.5 47.4 0 30.7 0zm0 35.4c-1.4 0-2.7-.6-3.7-1.5-.9-.9-1.5-2.2-1.5-3.7 0-2.9 2.3-5.2 5.2-5.2 2.9 0 5.2 2.3 5.2 5.2 0 1.4-.6 2.7-1.5 3.7-1 .9-2.3 1.5-3.7 1.5zm0-18.2c-7.1 0-12.9 5.8-12.9 12.9 0 3.6 1.4 6.8 3.8 9.1l.2.2c3.4 3.4 6 7.5 7.5 12.1.4 1.4.8 2.7 1 4.2v.1c0 .2.2.3.4.3s.4-.1.4-.3v-.1c.2-1.4.6-2.8 1-4.2 1.5-4.6 4.1-8.8 7.5-12.1l.2-.2c2.3-2.3 3.8-5.6 3.8-9.1.1-7.1-5.7-12.9-12.9-12.9z"></path></svg>
     </a>
     <nav class="menu">
       <a href="https://onedome.com/search">Buy</a>
