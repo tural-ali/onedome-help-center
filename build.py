@@ -244,6 +244,14 @@ TEMPLATE = r"""<!doctype html>
   .search-results .snip{color:var(--muted); font-size:14px; margin-top:4px}
   .empty{color:var(--muted); text-align:center; padding:48px 0}
 
+  /* ---- article feedback ---- */
+  .feedback{max-width:760px; margin:52px auto 0; padding:28px 0 0; border-top:1px solid var(--border); text-align:center}
+  .feedback .fb-q{font-family:var(--head); font-weight:700; color:var(--navy); font-size:17px; margin:0 0 16px}
+  .fb-btns{display:flex; gap:12px; justify-content:center}
+  .fb-btn{background:#fff; border:1px solid var(--border); border-radius:999px; padding:9px 28px; font-family:var(--body); font-size:15px; font-weight:600; color:var(--navy); cursor:pointer; transition:background .15s,border-color .15s}
+  .fb-btn:hover{background:var(--yellow); border-color:var(--yellow)}
+  .fb-no{display:none; color:var(--muted); font-size:15px; margin:2px 0 0}
+
   /* ---- footer (onedome.com style) ---- */
   footer.site{background:var(--black); color:#fff; margin-top:56px}
   footer.site .cols{display:grid; grid-template-columns:repeat(4,1fr); gap:28px; padding:56px 24px 32px; max-width:1120px; margin:0 auto}
@@ -363,9 +371,23 @@ function article(aid){
   const crumbs = ['<a href="#">Help</a>'];
   if(c) crumbs.push(`<a href="#/category/${c.id}">${esc(c.name)}</a>`);
   if(s) crumbs.push(`<a href="#/section/${s.id}">${esc(s.name)}</a>`);
+  const mailHref = `mailto:hello@onedome.com?subject=${encodeURIComponent("Help request: "+a.title)}`;
   app.innerHTML = `<div class="view article"><div class="breadcrumb">${crumbs.join(" › ")}</div>
-    <h1 class="page">${esc(a.title)}</h1><div class="body">${a.body||""}</div></div>`;
+    <h1 class="page">${esc(a.title)}</h1><div class="body">${a.body||""}</div>
+    <div class="feedback" id="fb">
+      <p class="fb-q">Did it help?</p>
+      <div class="fb-btns"><button class="fb-btn" type="button" onclick="fbVote(true)">Yes</button><button class="fb-btn" type="button" onclick="fbVote(false)">No</button></div>
+      <p class="fb-no">Sorry this didn't help. <a href="${mailHref}">Email us with your detailed request</a> and we'll get back to you.</p>
+    </div></div>`;
   window.scrollTo(0,0);
+}
+function fbVote(ok){
+  const fb=document.getElementById("fb"); if(!fb||fb.dataset.done) return;
+  fb.dataset.done="1";
+  const btns=fb.querySelector(".fb-btns"); if(btns) btns.remove();
+  const q=fb.querySelector(".fb-q");
+  if(ok){ q.textContent="Thanks for your feedback."; }
+  else { q.style.display="none"; fb.querySelector(".fb-no").style.display="block"; }
 }
 function search(term){
   const t = term.toLowerCase();
