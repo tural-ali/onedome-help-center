@@ -50,6 +50,10 @@ AUTH = (EMAIL, TOKEN)
 # Articles carrying this Confluence label are surfaced in "Popular articles".
 PROMOTED_LABEL = "promoted"
 
+# Canonical public host. The built-in *.pages.dev URL 301-redirects here so the
+# site is reachable at exactly one domain.
+CANONICAL_HOST = os.getenv("CANONICAL_HOST", "help.onedome.com")
+
 
 def _get(path, params=None):
     for _ in range(6):
@@ -146,7 +150,24 @@ def build():
     html_out = TEMPLATE.replace("__DATA__", json.dumps(payload, ensure_ascii=False))
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     OUT.write_text(html_out, encoding="utf-8")
+
+    # Advanced-mode Worker: redirect the built-in *.pages.dev host to the
+    # canonical domain; serve static assets unchanged everywhere else.
+    worker_js = (
+        "export default {\n"
+        "  async fetch(request, env) {\n"
+        "    const url = new URL(request.url);\n"
+        "    if (url.hostname.endsWith('.pages.dev')) {\n"
+        f"      return Response.redirect('https://{CANONICAL_HOST}' + url.pathname + url.search, 301);\n"
+        "    }\n"
+        "    return env.ASSETS.fetch(request);\n"
+        "  }\n"
+        "};\n"
+    )
+    (OUT_DIR / "_worker.js").write_text(worker_js, encoding="utf-8")
+
     print(f"Wrote {OUT}")
+    print(f"  _worker.js redirects *.pages.dev -> {CANONICAL_HOST}")
     print(f"  {len(payload['categories'])} categories, {len(payload['sections'])} sections, "
           f"{len(payload['articles'])} articles, {sum(a['promoted'] for a in payload['articles'])} promoted")
 
@@ -161,6 +182,7 @@ TEMPLATE = r"""<!doctype html>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>OneDome Help</title>
 <meta name="description" content="OneDome help centre - guides and FAQs for home movers, estate agents, conveyancers and mortgages.">
+<link rel="canonical" href="https://help.onedome.com/">
 <link rel="preconnect" href="https://cdn.onedome.com">
 <link rel="stylesheet" href="https://cdn.onedome.com/fonts/fonts.css">
 <link rel="preconnect" href="https://fonts.googleapis.com">
