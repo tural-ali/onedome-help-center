@@ -108,9 +108,10 @@ def localize_images(body, page_id, stats):
         if not fm:
             return m.group(0)  # e.g. <ri:url> external image — leave untouched
         fname = fm.group(1)
+        local = _local_img_name(page_id, fname)
 
         def fetch():
-            url = f"{BASE}/download/attachments/{page_id}/{quote(fname)}"
+            url = f"{BASE}/download/attachments/{page_id}/{quote(fname, safe='')}"
             try:
                 r = requests.get(url, auth=AUTH, timeout=60)
             except requests.RequestException as e:
@@ -118,13 +119,13 @@ def localize_images(body, page_id, stats):
                 return None
             return r.content if (r.status_code == 200 and r.content) else None
 
-        if not _ensure_cached(fname, fetch, stats):
+        if not _ensure_cached(local, fetch, stats):
             print(f"  WARN attachment missing: {fname} (page {page_id})")
             return m.group(0)
         stats["localized"] += 1
         alt_m = AC_ALT_RE.search(attrs)
         alt = html.escape(alt_m.group(1), quote=True) if alt_m else ""
-        return f'<img src="/images/{fname}" alt="{alt}" loading="lazy">'
+        return f'<img src="/images/{local}" alt="{alt}" loading="lazy">'
 
     def repl_zendesk(m):
         aid, fname = m.group(1), m.group(2)
