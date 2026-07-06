@@ -263,18 +263,26 @@ TEMPLATE = r"""<!doctype html>
   .wrap{max-width:1120px; margin:0 auto; padding:0 24px}
   h1,h2,h3{font-family:var(--head); color:var(--navy)}
 
-  /* ---- navbar (onedome.com style) ---- */
+  /* ---- navbar (full-width, onedome.com style with dropdowns) ---- */
   header.nav{background:var(--navy); position:sticky; top:0; z-index:50}
-  header.nav .wrap{display:flex; align-items:center; height:72px; gap:28px}
-  .brand{display:flex; align-items:center; gap:10px; cursor:pointer; text-decoration:none}
-  .brand .logo{height:30px; width:auto; display:block; flex:0 0 auto}
-  nav.menu{display:flex; gap:26px; margin-left:8px}
-  nav.menu a{color:#EDEDF2; font-size:16px}
-  nav.menu a:hover{color:#fff; text-decoration:none}
-  .nav-spacer{flex:1}
-  .call{background:var(--blue); color:#fff; border-radius:999px; padding:11px 20px; font-weight:600; font-size:15px; white-space:nowrap}
+  header.nav .bar{display:flex; align-items:center; height:72px; padding:0 40px}
+  .brand{display:flex; align-items:center; cursor:pointer; text-decoration:none; margin-right:auto}
+  .brand .logo{height:30px; width:auto; display:block}
+  nav.menu{display:flex; align-items:stretch; gap:30px; height:72px}
+  .menu-item{position:relative; display:flex; align-items:center}
+  .menu .top{display:inline-flex; align-items:center; gap:7px; height:72px; color:#EDEDF2; font-size:16px; cursor:pointer; text-decoration:none; white-space:nowrap}
+  .menu .top:hover, .menu-item:hover .top, .menu-item:focus-within .top{color:var(--yellow); text-decoration:none}
+  .menu .caret{width:10px; height:6px; transition:transform .15s}
+  .menu-item:hover .caret, .menu-item:focus-within .caret{transform:rotate(180deg)}
+  .dropdown{position:absolute; top:100%; left:0; min-width:232px; background:#fff; border-radius:14px;
+            box-shadow:0 16px 40px rgba(1,0,34,.20); padding:10px; z-index:60;
+            opacity:0; visibility:hidden; transform:translateY(6px); transition:opacity .15s, transform .15s}
+  .menu-item:hover .dropdown, .menu-item:focus-within .dropdown{opacity:1; visibility:visible; transform:translateY(0)}
+  .dropdown a{display:block; color:var(--navy); font-size:15px; padding:10px 14px; border-radius:9px; white-space:nowrap}
+  .dropdown a:hover{background:#f4f4f7; text-decoration:none}
+  .call{background:var(--blue); color:#fff; border-radius:999px; padding:11px 20px; font-weight:600; font-size:15px; white-space:nowrap; margin-left:30px}
   .call:hover{filter:brightness(1.08); text-decoration:none}
-  @media(max-width:860px){ nav.menu{display:none} }
+  @media(max-width:980px){ nav.menu{display:none} header.nav .bar{padding:0 24px} }
 
   /* ---- hero (help.onedome.com layout, onedome colours) ---- */
   .hero{background:radial-gradient(1200px 400px at 50% -40%, #1b1746 0%, var(--navy) 60%); color:#fff; padding:72px 24px 88px; text-align:center}
@@ -348,17 +356,39 @@ TEMPLATE = r"""<!doctype html>
 </head>
 <body>
 <header class="nav">
-  <div class="wrap">
+  <div class="bar">
     <a class="brand" href="https://onedome.com">
       <svg class="logo" role="img" aria-label="OneDome" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 284 57"><path fill="#fff" d="M217.3 19.5c-7.2 0-13 5.8-13 13s5.8 13 13 13 13-5.8 13-13-5.8-13-13-13zm0 4.3c4.8 0 8.7 3.9 8.7 8.7 0 4.8-3.9 8.7-8.7 8.7-4.8 0-8.7-3.9-8.7-8.7 0-4.9 3.9-8.7 8.7-8.7M130.7 37.2 117.4 20h-4.1v24.9h4.3V27.2l13.7 17.7h3.7V20h-4.3v17.2zm15-2.9h12.5v-3.9h-12.5v-6.5h14.1V20h-18.4v24.9H160V41h-14.3v-6.7zm40.2 6.2h-6.7v-21h6.7c6.1 0 9.6 5 9.6 10.7-.1 5.5-3.8 10.3-9.6 10.3zm-.1-25.4h-15.2l1.9 4.4h2.4v25.4h11c4 0 6.8-1 9.5-4 2.8-2.9 4.4-7 4.4-11.1 0-8-5.9-14.7-14-14.7zm62.1 16.6L240.3 20h-4.7v24.9h4.3V27.1l7.8 11.6h.2l7.8-11.7v17.9h4.4V20h-4.7l-7.5 11.7zm21.9 9.3v-6.7h12.4v-3.9h-12.4v-6.5h14V20h-18.4v24.9H284V41h-14.2zM92.9 15.2c-8.4 0-15.2 6.7-15.2 15.1 0 8.3 6.8 15.1 15.2 15.1 8.4 0 15.2-6.7 15.2-15.1 0-8.4-6.8-15.1-15.2-15.1zm0 4.3c6 0 10.8 4.8 10.8 10.7 0 5.9-4.9 10.7-10.8 10.7-6 0-10.8-4.8-10.8-10.7 0-5.9 4.8-10.7 10.8-10.7"></path><path fill="#fbbb30" d="M30.7 0C14 0 .5 13.5.5 30.2v.6C.7 38.9 4 46.2 9.4 51.5l6.1-6.1C12 41.9 9.7 37.2 9.3 32c-.1-.6-.1-1.2-.1-1.9 0-11.9 9.7-21.6 21.6-21.6 11.9 0 21.6 9.6 21.6 21.6 0 .6 0 1.3-.1 1.9-.4 5.2-2.7 9.9-6.2 13.4l6.1 6.1c5.3-5.3 8.7-12.6 8.8-20.7v-.6C60.9 13.5 47.4 0 30.7 0zm0 35.4c-1.4 0-2.7-.6-3.7-1.5-.9-.9-1.5-2.2-1.5-3.7 0-2.9 2.3-5.2 5.2-5.2 2.9 0 5.2 2.3 5.2 5.2 0 1.4-.6 2.7-1.5 3.7-1 .9-2.3 1.5-3.7 1.5zm0-18.2c-7.1 0-12.9 5.8-12.9 12.9 0 3.6 1.4 6.8 3.8 9.1l.2.2c3.4 3.4 6 7.5 7.5 12.1.4 1.4.8 2.7 1 4.2v.1c0 .2.2.3.4.3s.4-.1.4-.3v-.1c.2-1.4.6-2.8 1-4.2 1.5-4.6 4.1-8.8 7.5-12.1l.2-.2c2.3-2.3 3.8-5.6 3.8-9.1.1-7.1-5.7-12.9-12.9-12.9z"></path></svg>
     </a>
     <nav class="menu">
-      <a href="https://onedome.com/search">Buy</a>
-      <a href="https://onedome.com/mortgages">Mortgages</a>
-      <a href="https://onedome.com/conveyancing">Conveyancing</a>
-      <a href="https://onedome.com/growth-partners">Growth Partners</a>
+      <div class="menu-item">
+        <a class="top" href="https://onedome.com/search?q=actionType=SALE">Buy <svg class="caret" viewBox="0 0 10 6" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M1 1l4 4 4-4"/></svg></a>
+        <div class="dropdown">
+          <a href="https://onedome.com/search?q=actionType=SALE">Search</a>
+          <a href="https://onedome.com/services/get-buyer-passport/">Buyer Passport</a>
+          <a href="https://onedome.com/locations/uk/england/">Area guides</a>
+          <a href="https://onedome.com/locality-reality/explore/">Locality Reality</a>
+          <a href="https://www.onedome.com/new-homes/">New homes</a>
+          <a href="https://onedome.com/services/onedome-guarantee/">OneDome Guarantee</a>
+        </div>
+      </div>
+      <div class="menu-item">
+        <a class="top" href="https://onedome.com/services/mortgage-passport/">Mortgages <svg class="caret" viewBox="0 0 10 6" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M1 1l4 4 4-4"/></svg></a>
+        <div class="dropdown">
+          <a href="https://onedome.com/services/mortgage-passport/">Get a Mortgage</a>
+          <a href="https://onedome.com/mortgages/mortgages-explained/">Mortgage guides</a>
+        </div>
+      </div>
+      <div class="menu-item">
+        <a class="top" href="https://onedome.com/services/conveyancing/">Conveyancing <svg class="caret" viewBox="0 0 10 6" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M1 1l4 4 4-4"/></svg></a>
+        <div class="dropdown">
+          <a href="https://onedome.com/services/conveyancing/">Find a conveyancer</a>
+          <a href="https://onedome.com/conveyance/home-buying-and-selling-guides/">Conveyancing guides</a>
+        </div>
+      </div>
+      <a class="top" href="https://growthpartners.onedome.com/">Growth Partners</a>
+      <a class="top" href="https://onedome.com/registration/personal">My OneDome</a>
     </nav>
-    <div class="nav-spacer"></div>
     <a class="call" href="tel:08081751255">Call Us 0808 175 1255</a>
   </div>
 </header>
