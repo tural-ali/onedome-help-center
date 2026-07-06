@@ -81,6 +81,18 @@ def _local_img_name(aid, fname):
     return f"{aid}-{fname}"
 
 
+def _safe_attach_local(page_id, fname):
+    """Safe, collision-free local filename for a Confluence attachment.
+    Migrated images are already namespaced + sanitised ("<attId>-<file>") and are kept stable
+    so the committed cache still hits. Any other filename (e.g. an image an editor uploads later)
+    is sanitised — stripping spaces, path separators and leading/trailing dots — and namespaced
+    by page id to avoid cross-page collisions."""
+    name = re.sub(r"[^A-Za-z0-9._-]", "_", unquote(fname)).strip(".") or "image"
+    if re.fullmatch(r"\d+-[A-Za-z0-9._-]+", name):
+        return name
+    return f"{page_id}-{name}"
+
+
 def _ensure_cached(local, fetch_fn, stats):
     """True if `local` is already cached or successfully fetched via fetch_fn() -> bytes|None."""
     dest = ASSETS_IMG / local
@@ -107,7 +119,8 @@ def localize_images(body, page_id, stats):
         fm = RI_ATTACH_FN_RE.search(inner)
         if not fm:
             return m.group(0)  # e.g. <ri:url> external image — leave untouched
-        fname = fm.group(1)
+        fname = fm.group(1)                       # real attachment name (used for the download URL)
+        local = _safe_attach_local(page_id, fname)  # safe, unique name used for cache + src
 
         def fetch():
             url = f"{BASE}/download/attachments/{page_id}/{quote(fname)}"
@@ -116,15 +129,18 @@ def localize_images(body, page_id, stats):
             except requests.RequestException as e:
                 print(f"  WARN attachment fetch error {url}: {e}")
                 return None
-            return r.content if (r.status_code == 200 and r.content) else None
+            if r.status_code != 200 or not r.content:
+                print(f"  WARN attachment {r.status_code}: {url}")
+                return None
+            return r.content
 
-        if not _ensure_cached(fname, fetch, stats):
+        if not _ensure_cached(local, fetch, stats):
             print(f"  WARN attachment missing: {fname} (page {page_id})")
             return m.group(0)
         stats["localized"] += 1
         alt_m = AC_ALT_RE.search(attrs)
         alt = html.escape(alt_m.group(1), quote=True) if alt_m else ""
-        return f'<img src="/images/{fname}" alt="{alt}" loading="lazy">'
+        return f'<img src="/images/{local}" alt="{alt}" loading="lazy">'
 
     def repl_zendesk(m):
         aid, fname = m.group(1), m.group(2)
@@ -137,7 +153,10 @@ def localize_images(body, page_id, stats):
             except requests.RequestException as e:
                 print(f"  WARN image fetch error {src_url}: {e}")
                 return None
-            return r.content if (r.status_code == 200 and r.content) else None
+            if r.status_code != 200 or not r.content:
+                print(f"  WARN image {r.status_code}: {src_url}")
+                return None
+            return r.content
 
         if not _ensure_cached(local, fetch, stats):
             return m.group(0)
