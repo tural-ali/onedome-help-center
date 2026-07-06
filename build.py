@@ -26,7 +26,9 @@ import os
 import re
 import json
 import html
+import shutil
 from pathlib import Path
+from urllib.parse import unquote
 
 import requests
 
@@ -53,6 +55,54 @@ PROMOTED_LABEL = "promoted"
 # Canonical public host. The built-in *.pages.dev URL 301-redirects here so the
 # site is reachable at exactly one domain.
 CANONICAL_HOST = os.getenv("CANONICAL_HOST", "help.onedome.com")
+
+# Article bodies carry legacy Zendesk image URLs (help.onedome.com/hc/article_attachments/…),
+# which no longer resolve now that help.onedome.com is this site. We download each image once
+# into a committed cache and self-host it under /images/, so the site has no runtime dependency
+# on Zendesk. Zendesk still serves the originals at onedome.zendesk.com for the initial fetch.
+ASSETS_IMG = ROOT / "assets" / "images"          # committed cache (survives Zendesk shutdown)
+IMG_FETCH_HOST = "onedome.zendesk.com"
+ZENDESK_IMG_RE = re.compile(
+    r"https?://(?:help\.onedome\.com|onedome\.zendesk\.com)/hc/"
+    r"(?:[^\"'?\s]*?/)?article_attachments/(\d+)/([^\"'?\s>]+)"
+)
+
+
+def _local_img_name(aid, fname):
+    fname = unquote(fname)
+    fname = re.sub(r"[^A-Za-z0-9._-]", "_", fname)
+    return f"{aid}-{fname}"
+
+
+def localize_images(body, stats):
+    """Rewrite legacy Zendesk image URLs to self-hosted /images/… paths, downloading
+    any not yet cached. Leaves the original URL in place if a download fails."""
+    if not body:
+        return body
+
+    def repl(m):
+        aid, fname = m.group(1), m.group(2)
+        local = _local_img_name(aid, fname)
+        dest = ASSETS_IMG / local
+        if not dest.exists():
+            src_url = re.sub(r"https?://[^/]+", f"https://{IMG_FETCH_HOST}", m.group(0))
+            try:
+                r = requests.get(src_url, timeout=60)
+            except requests.RequestException as e:
+                print(f"  WARN image fetch error {src_url}: {e}")
+                stats["failed"] += 1
+                return m.group(0)
+            if r.status_code != 200 or not r.content:
+                print(f"  WARN image {r.status_code}: {src_url}")
+                stats["failed"] += 1
+                return m.group(0)
+            ASSETS_IMG.mkdir(parents=True, exist_ok=True)
+            dest.write_bytes(r.content)
+            stats["downloaded"] += 1
+        stats["localized"] += 1
+        return f"/images/{local}"
+
+    return ZENDESK_IMG_RE.sub(repl, body)
 
 
 def _get(path, params=None):
@@ -138,6 +188,10 @@ def build():
     for a in articles:
         a["promoted"] = a["id"] in promoted
 
+    img_stats = {"localized": 0, "downloaded": 0, "failed": 0}
+    for a in articles:
+        a["body"] = localize_images(a["body"], img_stats)
+
     payload = {
         "categories": [{"id": c["id"], "name": c["title"], "description": c["description"]}
                        for c in categories],
@@ -166,8 +220,14 @@ def build():
     )
     (OUT_DIR / "_worker.js").write_text(worker_js, encoding="utf-8")
 
+    # Self-host the cached images alongside the site.
+    if ASSETS_IMG.exists():
+        shutil.copytree(ASSETS_IMG, OUT_DIR / "images", dirs_exist_ok=True)
+
     print(f"Wrote {OUT}")
     print(f"  _worker.js redirects *.pages.dev -> {CANONICAL_HOST}")
+    print(f"  images: {img_stats['localized']} localized, "
+          f"{img_stats['downloaded']} downloaded, {img_stats['failed']} failed")
     print(f"  {len(payload['categories'])} categories, {len(payload['sections'])} sections, "
           f"{len(payload['articles'])} articles, {sum(a['promoted'] for a in payload['articles'])} promoted")
 
