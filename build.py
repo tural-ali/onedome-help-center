@@ -28,7 +28,7 @@ import json
 import html
 import shutil
 from pathlib import Path
-from urllib.parse import unquote
+from urllib.parse import unquote, quote
 
 import requests
 
@@ -56,16 +56,23 @@ PROMOTED_LABEL = "promoted"
 # site is reachable at exactly one domain.
 CANONICAL_HOST = os.getenv("CANONICAL_HOST", "help.onedome.com")
 
-# Article bodies carry legacy Zendesk image URLs (help.onedome.com/hc/article_attachments/…),
-# which no longer resolve now that help.onedome.com is this site. We download each image once
-# into a committed cache and self-host it under /images/, so the site has no runtime dependency
-# on Zendesk. Zendesk still serves the originals at onedome.zendesk.com for the initial fetch.
-ASSETS_IMG = ROOT / "assets" / "images"          # committed cache (survives Zendesk shutdown)
+# Article bodies reference images two ways:
+#   1. Confluence-native <ac:image><ri:attachment ri:filename="…"/></ac:image> — the source of
+#      truth after images were migrated into Confluence attachments, and
+#   2. legacy Zendesk URLs (help.onedome.com/hc/article_attachments/…) — a fallback for any
+#      content not yet migrated.
+# Either way we download the image once into a committed cache, self-host it under /images/, and
+# rewrite the markup to a plain <img> so it renders on the static site. No runtime dependency on
+# Zendesk; Confluence attachments are fetched with the build's API credentials.
+ASSETS_IMG = ROOT / "assets" / "images"          # committed cache
 IMG_FETCH_HOST = "onedome.zendesk.com"
 ZENDESK_IMG_RE = re.compile(
     r"https?://(?:help\.onedome\.com|onedome\.zendesk\.com)/hc/"
     r"(?:[^\"'?\s]*?/)?article_attachments/(\d+)/([^\"'?\s>]+)"
 )
+AC_IMAGE_RE = re.compile(r"<ac:image\b([^>]*)>(.*?)</ac:image>", re.S)
+RI_ATTACH_FN_RE = re.compile(r'<ri:attachment\b[^>]*\bri:filename="([^"]+)"')
+AC_ALT_RE = re.compile(r'ac:alt="([^"]*)"')
 
 
 def _local_img_name(aid, fname):
@@ -74,35 +81,72 @@ def _local_img_name(aid, fname):
     return f"{aid}-{fname}"
 
 
-def localize_images(body, stats):
-    """Rewrite legacy Zendesk image URLs to self-hosted /images/… paths, downloading
-    any not yet cached. Leaves the original URL in place if a download fails."""
+def _ensure_cached(local, fetch_fn, stats):
+    """True if `local` is already cached or successfully fetched via fetch_fn() -> bytes|None."""
+    dest = ASSETS_IMG / local
+    if dest.exists() and dest.stat().st_size > 0:
+        return True
+    data = fetch_fn()
+    if not data:
+        stats["failed"] += 1
+        return False
+    ASSETS_IMG.mkdir(parents=True, exist_ok=True)
+    dest.write_bytes(data)
+    stats["downloaded"] += 1
+    return True
+
+
+def localize_images(body, page_id, stats):
+    """Rewrite Confluence <ac:image> attachments and legacy Zendesk <img> URLs to self-hosted
+    <img src="/images/…">, downloading any not yet cached. Leaves markup intact on failure."""
     if not body:
         return body
 
-    def repl(m):
+    def repl_ac(m):
+        attrs, inner = m.group(1), m.group(2)
+        fm = RI_ATTACH_FN_RE.search(inner)
+        if not fm:
+            return m.group(0)  # e.g. <ri:url> external image — leave untouched
+        fname = fm.group(1)
+
+        def fetch():
+            url = f"{BASE}/download/attachments/{page_id}/{quote(fname)}"
+            try:
+                r = requests.get(url, auth=AUTH, timeout=60)
+            except requests.RequestException as e:
+                print(f"  WARN attachment fetch error {url}: {e}")
+                return None
+            return r.content if (r.status_code == 200 and r.content) else None
+
+        if not _ensure_cached(fname, fetch, stats):
+            print(f"  WARN attachment missing: {fname} (page {page_id})")
+            return m.group(0)
+        stats["localized"] += 1
+        alt_m = AC_ALT_RE.search(attrs)
+        alt = html.escape(alt_m.group(1), quote=True) if alt_m else ""
+        return f'<img src="/images/{fname}" alt="{alt}" loading="lazy">'
+
+    def repl_zendesk(m):
         aid, fname = m.group(1), m.group(2)
         local = _local_img_name(aid, fname)
-        dest = ASSETS_IMG / local
-        if not dest.exists():
+
+        def fetch():
             src_url = re.sub(r"https?://[^/]+", f"https://{IMG_FETCH_HOST}", m.group(0))
             try:
                 r = requests.get(src_url, timeout=60)
             except requests.RequestException as e:
                 print(f"  WARN image fetch error {src_url}: {e}")
-                stats["failed"] += 1
-                return m.group(0)
-            if r.status_code != 200 or not r.content:
-                print(f"  WARN image {r.status_code}: {src_url}")
-                stats["failed"] += 1
-                return m.group(0)
-            ASSETS_IMG.mkdir(parents=True, exist_ok=True)
-            dest.write_bytes(r.content)
-            stats["downloaded"] += 1
+                return None
+            return r.content if (r.status_code == 200 and r.content) else None
+
+        if not _ensure_cached(local, fetch, stats):
+            return m.group(0)
         stats["localized"] += 1
         return f"/images/{local}"
 
-    return ZENDESK_IMG_RE.sub(repl, body)
+    body = AC_IMAGE_RE.sub(repl_ac, body)
+    body = ZENDESK_IMG_RE.sub(repl_zendesk, body)
+    return body
 
 
 def _get(path, params=None):
@@ -190,7 +234,7 @@ def build():
 
     img_stats = {"localized": 0, "downloaded": 0, "failed": 0}
     for a in articles:
-        a["body"] = localize_images(a["body"], img_stats)
+        a["body"] = localize_images(a["body"], a["id"], img_stats)
 
     payload = {
         "categories": [{"id": c["id"], "name": c["title"], "description": c["description"]}
