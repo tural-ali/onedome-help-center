@@ -318,12 +318,13 @@ TEMPLATE = r"""<!doctype html>
   .menu .top:hover, .menu-item:hover .top, .menu-item:focus-within .top{color:var(--yellow); text-decoration:none}
   .menu .caret{width:10px; height:6px; transition:transform .15s}
   .menu-item:hover .caret, .menu-item:focus-within .caret{transform:rotate(180deg)}
-  .dropdown{position:absolute; top:100%; left:0; min-width:232px; background:#fff; border-radius:14px;
-            box-shadow:0 16px 40px rgba(1,0,34,.20); padding:10px; z-index:60;
-            opacity:0; visibility:hidden; transform:translateY(6px); transition:opacity .15s, transform .15s}
-  .menu-item:hover .dropdown, .menu-item:focus-within .dropdown{opacity:1; visibility:visible; transform:translateY(0)}
-  .dropdown a{display:block; color:var(--navy); font-size:15px; padding:10px 14px; border-radius:9px; white-space:nowrap}
-  .dropdown a:hover{background:#f4f4f7; text-decoration:none}
+  .dropdown{position:absolute; top:100%; left:0; min-width:230px; background:#fff;
+            border-top:4px solid var(--yellow); border-radius:0 0 8px 8px;
+            box-shadow:0 2px 4px rgba(50,52,56,.2); padding:0 0 8px; z-index:60;
+            opacity:0; visibility:hidden; transition:opacity .12s}
+  .menu-item:hover .dropdown, .menu-item:focus-within .dropdown{opacity:1; visibility:visible}
+  .dropdown a{display:block; color:#323438; font-size:15px; font-weight:400; line-height:46px; padding:0 16px; white-space:nowrap}
+  .dropdown a:hover{background:#f5f5f6; text-decoration:none}
   .call{background:var(--blue); color:#fff; border-radius:999px; padding:11px 20px; font-weight:600; font-size:15px; white-space:nowrap; margin-left:30px}
   .call:hover{filter:brightness(1.08); text-decoration:none}
   @media(max-width:980px){ nav.menu{display:none} header.nav .bar{padding:0 24px} }
